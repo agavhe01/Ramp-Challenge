@@ -27,8 +27,23 @@ export function usePaginatedTransactions(): PaginatedTransactionsResult {
         return response
       }
 
+      // Merge the new transactions with existing ones, preserving approval states
+      const mergedData = [...previousResponse.data]
+      response.data.forEach((newTransaction) => {
+        const existingIndex = mergedData.findIndex(t => t.id === newTransaction.id)
+        if (existingIndex === -1) {
+          mergedData.push(newTransaction)
+        } else {
+          // Preserve the existing transaction's approval state
+          mergedData[existingIndex] = {
+            ...newTransaction,
+            approved: mergedData[existingIndex].approved
+          }
+        }
+      })
+
       return {
-        data: [...previousResponse.data, ...response.data],
+        data: mergedData,
         nextPage: response.nextPage
       }
     })

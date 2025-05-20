@@ -6,6 +6,7 @@ import { useCustomFetch } from "./useCustomFetch"
 export function useTransactionsByEmployee(): TransactionsByEmployeeResult {
   const { fetchWithCache, loading } = useCustomFetch()
   const [transactionsByEmployee, setTransactionsByEmployee] = useState<Transaction[] | null>(null)
+  const [previousApprovals, setPreviousApprovals] = useState<Map<string, boolean>>(new Map())
 
   const fetchById = useCallback(
     async (employeeId: string) => {
@@ -16,9 +17,24 @@ export function useTransactionsByEmployee(): TransactionsByEmployeeResult {
         }
       )
 
-      setTransactionsByEmployee(data)
+      // Store current approval states before updating
+      if (transactionsByEmployee) {
+        const approvals = new Map<string, boolean>()
+        transactionsByEmployee.forEach(transaction => {
+          approvals.set(transaction.id, transaction.approved)
+        })
+        setPreviousApprovals(approvals)
+      }
+
+      // Apply previous approval states to new transactions
+      const updatedData = data === null ? [] : data.map(transaction => ({
+        ...transaction,
+        approved: previousApprovals.get(transaction.id) ?? transaction.approved
+      }))
+
+      setTransactionsByEmployee(updatedData)
     },
-    [fetchWithCache]
+    [fetchWithCache, transactionsByEmployee, previousApprovals]
   )
 
   const invalidateData = useCallback(() => {

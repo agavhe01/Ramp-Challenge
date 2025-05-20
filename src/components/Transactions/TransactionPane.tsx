@@ -1,13 +1,14 @@
-import { useState } from "react"
 import { InputCheckbox } from "../InputCheckbox"
 import { TransactionPaneComponent } from "./types"
+import { useTransactionApproval } from "../../context/TransactionApprovalContext"
 
 export const TransactionPane: TransactionPaneComponent = ({
   transaction,
   loading,
   setTransactionApproval: consumerSetTransactionApproval,
 }) => {
-  const [approved, setApproved] = useState(transaction.approved)
+  const { approvedTransactions, setTransactionApproval } = useTransactionApproval()
+  const isApproved = approvedTransactions.has(transaction.id)
 
   return (
     <div className="RampPane">
@@ -20,15 +21,19 @@ export const TransactionPane: TransactionPaneComponent = ({
       </div>
       <InputCheckbox
         id={transaction.id}
-        checked={approved}
+        checked={isApproved}
         disabled={loading}
         onChange={async (newValue) => {
-          await consumerSetTransactionApproval({
-            transactionId: transaction.id,
-            newValue,
-          })
-
-          setApproved(newValue)
+          try {
+            await consumerSetTransactionApproval({
+              transactionId: transaction.id,
+              newValue,
+            })
+            setTransactionApproval(transaction.id, newValue)
+          } catch (error) {
+            // If the API call fails, revert the checkbox state
+            setTransactionApproval(transaction.id, !newValue)
+          }
         }}
       />
     </div>
